@@ -1,0 +1,26 @@
+server:
+  port: 8083
+spring:
+  application:
+    name: qprint-cart
+  datasource:
+    url: ${POSTGRES_URL:jdbc:postgresql://postgres:5432/qprint}
+    username: ${POSTGRES_USER:QPrint}
+    password: ${POSTGRES_PASSWORD:password}
+  jpa:
+    hibernate:
+      ddl-auto: update
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+    consumer:
+      group-id: QPrint-cart
+      auto-offset-reset: earliest
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

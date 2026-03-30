@@ -1,0 +1,1 @@
+com.QPrint:QPrint:pom:0.0.1-SNAPSHOT

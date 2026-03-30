@@ -1,0 +1,40 @@
+server:
+  port: 8084
+spring:
+  application:
+    name: qprint-checkout
+  datasource:
+    url: ${POSTGRES_URL:jdbc:postgresql://postgres:5432/qprint}
+    username: ${POSTGRES_USER:QPrint}
+    password: ${POSTGRES_PASSWORD:password}
+  jpa:
+    hibernate:
+      ddl-auto: update
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: QPrint-checkout
+      auto-offset-reset: earliest
+razorpay:
+  key-id: ${RAZORPAY_KEY_ID:}
+  key-secret: ${RAZORPAY_KEY_SECRET:}
+  webhook-secret: ${RAZORPAY_WEBHOOK_SECRET:}
+orders:
+  service-url: ${ORDERS_SERVICE_URL:http://qprint-orders:8085}
+  topic:
+    confirmed: ${ORDERS_CONFIRMED_TOPIC:order.confirmed}
+  dispatch:
+    max-attempts: ${ORDERS_DISPATCH_MAX_ATTEMPTS:3}
+    backoff-millis: ${ORDERS_DISPATCH_BACKOFF_MILLIS:500}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

@@ -1,0 +1,101 @@
+server:
+  port: 8080
+spring:
+  application:
+    name: QPrint-gateway
+  main:
+    web-application-type: reactive
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+  cloud:
+    gateway:
+      default-filters:
+        - name: DedupeResponseHeader
+          args:
+            name: Access-Control-Allow-Credentials Access-Control-Allow-Origin
+            strategy: RETAIN_FIRST
+      routes:
+        - id: checkout-webhook
+          uri: http://qprint-checkout:8084
+          predicates:
+            - Path=/api/checkout/webhook/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 50
+                redis-rate-limiter.burstCapacity: 80
+        - id: auth-service
+          uri: http://qprint-auth:8081
+          predicates:
+            - Path=/auth/**
+        - id: objects-service
+          uri: http://qprint-objects:8082
+          predicates:
+            - Path=/api/objects/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 100
+                redis-rate-limiter.burstCapacity: 120
+            - JwtAuth
+        - id: cart-service
+          uri: http://qprint-cart:8083
+          predicates:
+            - Path=/api/cart/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 100
+                redis-rate-limiter.burstCapacity: 120
+            - JwtAuth
+        - id: checkout-service
+          uri: http://qprint-checkout:8084
+          predicates:
+            - Path=/api/checkout/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 100
+                redis-rate-limiter.burstCapacity: 120
+            - JwtAuth
+        - id: orders-service
+          uri: http://qprint-orders:8085
+          predicates:
+            - Path=/api/orders/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 100
+                redis-rate-limiter.burstCapacity: 120
+            - JwtAuth
+        - id: transactions-service
+          uri: http://qprint-transactions:8087
+          predicates:
+            - Path=/api/transactions/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 100
+                redis-rate-limiter.burstCapacity: 120
+            - JwtAuth
+        - id: shops-service
+          uri: http://qprint-shops:8088
+          predicates:
+            - Path=/api/shops/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 100
+                redis-rate-limiter.burstCapacity: 120
+            - JwtAuth
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+jwt:
+  secret: ${JWT_SECRET:change-me-please-change-me-please-change-me}
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}

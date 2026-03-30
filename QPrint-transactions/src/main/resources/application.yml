@@ -1,0 +1,25 @@
+server:
+  port: 8087
+spring:
+  application:
+    name: qprint-transactions
+  datasource:
+    url: ${POSTGRES_URL:jdbc:postgresql://postgres:5432/qprint}
+    username: ${POSTGRES_USER:QPrint}
+    password: ${POSTGRES_PASSWORD:password}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+    consumer:
+      group-id: QPrint-transactions
+      auto-offset-reset: earliest
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

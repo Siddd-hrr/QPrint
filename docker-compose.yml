@@ -1,0 +1,266 @@
+version: "3.9"
+
+networks:
+  qprint-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  minio_data:
+  kafka_data:
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: qprint-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: qprint
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - qprint-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: qprint-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - qprint-net
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    container_name: qprint-zookeeper
+    restart: unless-stopped
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - qprint-net
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: qprint-kafka
+    restart: unless-stopped
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+    networks:
+      - qprint-net
+
+  minio:
+    image: minio/minio:latest
+    container_name: qprint-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    networks:
+      - qprint-net
+
+  qprint-gateway:
+    build:
+      context: .
+      dockerfile: QPrint-gateway/Dockerfile
+    depends_on:
+      - kafka
+      - redis
+      - qprint-auth
+    ports:
+      - "8080:8080"
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ALLOWED_ORIGINS: http://localhost:5173,http://localhost:5174,http://localhost:5175
+    networks:
+      - qprint-net
+
+  qprint-auth:
+    build:
+      context: .
+      dockerfile: QPrint-auth/Dockerfile
+    depends_on:
+      - postgres
+      - redis
+      - kafka
+    ports:
+      - "8081:8081"
+    environment:
+      POSTGRES_URL: jdbc:postgresql://postgres:5432/qprint
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP: kafka:9092
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USERNAME: ${SMTP_USERNAME}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+    networks:
+      - qprint-net
+
+  qprint-objects:
+    build:
+      context: .
+      dockerfile: QPrint-objects/Dockerfile
+    depends_on:
+      - postgres
+      - redis
+      - kafka
+      - minio
+    ports:
+      - "8082:8082"
+    environment:
+      POSTGRES_URL: jdbc:postgresql://postgres:5432/qprint
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP: kafka:9092
+      MINIO_URL: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+    networks:
+      - qprint-net
+
+  qprint-cart:
+    build:
+      context: .
+      dockerfile: QPrint-cart/Dockerfile
+    depends_on:
+      - postgres
+      - redis
+      - kafka
+    ports:
+      - "8083:8083"
+    environment:
+      POSTGRES_URL: jdbc:postgresql://postgres:5432/qprint
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP: kafka:9092
+    networks:
+      - qprint-net
+
+  qprint-checkout:
+    build:
+      context: .
+      dockerfile: QPrint-checkout/Dockerfile
+    depends_on:
+      - redis
+      - kafka
+      - postgres
+    ports:
+      - "8084:8084"
+    environment:
+      POSTGRES_URL: jdbc:postgresql://postgres:5432/qprint
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP: kafka:9092
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET}
+    networks:
+      - qprint-net
+
+  qprint-orders:
+    build:
+      context: .
+      dockerfile: QPrint-orders/Dockerfile
+    depends_on:
+      - redis
+      - kafka
+      - postgres
+    ports:
+      - "8085:8085"
+    environment:
+      POSTGRES_URL: jdbc:postgresql://postgres:5432/qprint
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP: kafka:9092
+    networks:
+      - qprint-net
+
+  qprint-otp:
+    build:
+      context: .
+      dockerfile: QPrint-otp/Dockerfile
+    depends_on:
+      - redis
+      - kafka
+    ports:
+      - "8086:8086"
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP: kafka:9092
+    networks:
+      - qprint-net
+
+  qprint-transactions:
+    build:
+      context: .
+      dockerfile: QPrint-transactions/Dockerfile
+    depends_on:
+      - postgres
+      - kafka
+    ports:
+      - "8087:8087"
+    environment:
+      POSTGRES_URL: jdbc:postgresql://postgres:5432/qprint
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      KAFKA_BOOTSTRAP: kafka:9092
+    networks:
+      - qprint-net
+
+  qprint-shops:
+    build:
+      context: .
+      dockerfile: QPrint-shops/Dockerfile
+    ports:
+      - "8088:8088"
+    networks:
+      - qprint-net

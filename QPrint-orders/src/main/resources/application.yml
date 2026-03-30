@@ -1,0 +1,42 @@
+server:
+  port: 8085
+spring:
+  application:
+    name: qprint-orders
+  datasource:
+    url: ${POSTGRES_URL:jdbc:postgresql://postgres:5432/qprint}
+    username: ${POSTGRES_USER:QPrint}
+    password: ${POSTGRES_PASSWORD:password}
+  jpa:
+    hibernate:
+      ddl-auto: update
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+    consumer:
+      group-id: QPrint-orders
+      auto-offset-reset: earliest
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+orders:
+  topic:
+    completed: ${ORDERS_COMPLETED_TOPIC:order.completed}
+    confirmed: ${ORDERS_CONFIRMED_TOPIC:order.confirmed}
+    status-updated: ${ORDERS_STATUS_UPDATED_TOPIC:order.status.updated}
+  internal:
+    secret: ${ORDERS_INTERNAL_SECRET:change-me}
+  otp:
+    ttl-seconds: ${ORDERS_OTP_TTL_SECONDS:600}
+  active:
+    ttl-hours: ${ORDERS_ACTIVE_TTL_HOURS:48}
+otp:
+  service-url: ${OTP_SERVICE_URL:http://qprint-otp:8086}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

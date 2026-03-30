@@ -1,0 +1,35 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.iml
+
+# Secrets and local env files
+.env
+.env.local
+.env.production
+.env.deploy
+*.pem
+*.key
+
+# Build and dependency artifacts
+target/
+**/target/
+.m2/
+node_modules/
+QPrint-frontend/node_modules/
+QPrint-frontend/dist/
+QPrint-frontend/.vite/
+*.class
+*.log
+
+# Temporary and local tool output
+.tmp/
+tmp/
+docker_logs.txt
+.github/java-upgrade/
+tmp-test.png
+
+# Keep checked-in templates
+!.env.example

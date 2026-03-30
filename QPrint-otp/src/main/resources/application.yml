@@ -1,0 +1,21 @@
+server:
+  port: 8086
+spring:
+  application:
+    name: QPrint-otp
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+    consumer:
+      group-id: QPrint-otp
+      auto-offset-reset: earliest
+otp:
+  ttl-seconds: ${OTP_TTL_SECONDS:600}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

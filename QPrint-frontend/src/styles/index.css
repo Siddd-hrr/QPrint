@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  background: radial-gradient(circle at 20% 20%, rgba(99, 102, 241, 0.15), transparent 25%),
+    radial-gradient(circle at 80% 0%, rgba(245, 158, 11, 0.12), transparent 25%),
+    linear-gradient(180deg, #0a0f1e 0%, #060912 100%);
+  color: #ffffff;
+  min-height: 100vh;
+}
+
+.auth-bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 30% 30%, rgba(99, 102, 241, 0.22), transparent 25%),
+    radial-gradient(circle at 70% 40%, rgba(245, 158, 11, 0.18), transparent 23%),
+    radial-gradient(circle at 50% 75%, rgba(16, 185, 129, 0.12), transparent 24%);
+  filter: blur(90px);
+  opacity: 0.8;
+  z-index: 0;
+}
+
+.glass-card {
+  background: rgba(17, 24, 39, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(14px);
+  border-radius: 18px;
+}
+
+.floating-shape {
+  position: absolute;
+  width: 260px;
+  height: 260px;
+  border-radius: 40% 60% 50% 70%;
+  filter: blur(65px);
+  opacity: 0.5;
+  animation: float 12s ease-in-out infinite;
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px) translateX(0px);
+  }
+  50% {
+    transform: translateY(-16px) translateX(8px);
+  }
+  100% {
+    transform: translateY(0px) translateX(0px);
+  }
+}
+
+.input-focus-ring {
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.18);
+}
+
+.otp-input::-webkit-outer-spin-button,
+.otp-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.otp-input[type="number"] {
+  -moz-appearance: textfield;
+}

@@ -1,0 +1,188 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: qprint
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [qprint-net]
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    networks: [qprint-net]
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    restart: unless-stopped
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks: [qprint-net]
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    restart: unless-stopped
+    depends_on: [zookeeper]
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+    networks: [qprint-net]
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    networks: [qprint-net]
+
+  qprint-gateway:
+    image: ghcr.io/${GHCR_OWNER}/qprint-gateway:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    depends_on: [kafka, redis, qprint-auth]
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+    ports:
+      - "${GATEWAY_PORT:-8080}:8080"
+    networks: [qprint-net]
+
+  qprint-auth:
+    image: ghcr.io/${GHCR_OWNER}/qprint-auth:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    depends_on: [postgres, redis, kafka]
+    environment:
+      POSTGRES_URL: jdbc:postgresql://postgres:5432/qprint
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP: kafka:9092
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USERNAME: ${SMTP_USERNAME}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      SMTP_FROM: ${SMTP_FROM}
+      JWT_SECRET: ${JWT_SECRET}
+    networks: [qprint-net]
+
+  qprint-objects:
+    image: ghcr.io/${GHCR_OWNER}/qprint-objects:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    depends_on: [postgres, redis, kafka, minio]
+    environment:
+      POSTGRES_URL: jdbc:postgresql://postgres:5432/qprint
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP: kafka:9092
+      MINIO_URL: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+    networks: [qprint-net]
+
+  qprint-cart:
+    image: ghcr.io/${GHCR_OWNER}/qprint-cart:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    depends_on: [postgres, redis, kafka]
+    environment:
+      POSTGRES_URL: jdbc:postgresql://postgres:5432/qprint
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP: kafka:9092
+    networks: [qprint-net]
+
+  qprint-checkout:
+    image: ghcr.io/${GHCR_OWNER}/qprint-checkout:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    depends_on: [postgres, redis, kafka]
+    environment:
+      POSTGRES_URL: jdbc:postgresql://postgres:5432/qprint
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP: kafka:9092
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET}
+    networks: [qprint-net]
+
+  qprint-orders:
+    image: ghcr.io/${GHCR_OWNER}/qprint-orders:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    depends_on: [postgres, redis, kafka]
+    environment:
+      POSTGRES_URL: jdbc:postgresql://postgres:5432/qprint
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP: kafka:9092
+    networks: [qprint-net]
+
+  qprint-otp:
+    image: ghcr.io/${GHCR_OWNER}/qprint-otp:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    depends_on: [redis, kafka]
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP: kafka:9092
+    networks: [qprint-net]
+
+  qprint-transactions:
+    image: ghcr.io/${GHCR_OWNER}/qprint-transactions:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    depends_on: [postgres, kafka]
+    environment:
+      POSTGRES_URL: jdbc:postgresql://postgres:5432/qprint
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      KAFKA_BOOTSTRAP: kafka:9092
+    networks: [qprint-net]
+
+  qprint-shops:
+    image: ghcr.io/${GHCR_OWNER}/qprint-shops:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    networks: [qprint-net]
+
+  qprint-frontend:
+    image: ghcr.io/${GHCR_OWNER}/qprint-frontend:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    depends_on: [qprint-gateway]
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    networks: [qprint-net]
+
+volumes:
+  postgres_data:
+  minio_data:
+
+networks:
+  qprint-net:
+    driver: bridge
