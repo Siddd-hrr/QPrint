@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 
 import api from '../api/axios';
 import Button from '../components/ui/Button';
+import Header from '../components/Header';
 import { useAuthStore } from '../store/authStore';
 import { getErrorMessage } from '../utils/api';
 
@@ -55,12 +56,14 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-white px-4 py-6">
-      <div className="max-w-5xl mx-auto space-y-6">
-        <div>
-          <p className="text-sm text-gray-400">Settings</p>
-          <h1 className="text-2xl font-semibold">Account settings</h1>
-        </div>
+    <div className="min-h-screen bg-background text-white flex flex-col">
+      <Header />
+      <div className="flex-1 px-4 py-6">
+        <div className="max-w-5xl mx-auto space-y-6">
+          <div>
+            <p className="text-sm text-gray-400">Settings</p>
+            <h1 className="text-2xl font-semibold">Account settings</h1>
+          </div>
 
         <div className="grid gap-4 lg:grid-cols-[2fr,1fr]">
           <section className="glass-card border border-white/10 p-6 space-y-4">
@@ -150,6 +153,7 @@ export default function SettingsPage() {
         </section>
       </div>
     </div>
+  </div>
   );
 }
 
