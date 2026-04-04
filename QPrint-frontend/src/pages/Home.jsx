@@ -16,6 +16,7 @@ import toast from 'react-hot-toast';
 import api from '../api/axios';
 import Button from '../components/ui/Button';
 import Spinner from '../components/ui/Spinner';
+import Header from '../components/Header';
 import { useAuthStore } from '../store/authStore';
 import { useCartStore } from '../store/cartStore';
 import { useShopStore } from '../store/shopStore';
@@ -116,9 +117,11 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-white px-4 py-6">
-      <div className="max-w-6xl mx-auto space-y-6">
-        <header className="flex items-center justify-between">
+    <div className="min-h-screen bg-background text-white flex flex-col">
+      <Header />
+      <div className="flex-1 px-4 py-6">
+        <div className="max-w-6xl mx-auto space-y-6">
+          <header className="flex items-center justify-between">
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-primary">
               <Sparkles className="h-5 w-5" />
@@ -253,6 +256,7 @@ export default function HomePage() {
           </Button>
         </section>
       </div>
+    </div>
     </div>
   );
 }
