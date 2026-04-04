@@ -6,6 +6,7 @@ import { AlertCircle, ArrowLeft, CheckCircle2, Loader2, RefreshCw, ShieldAlert }
 import api from '../api/axios';
 import Button from '../components/ui/Button';
 import Spinner from '../components/ui/Spinner';
+import Header from '../components/Header';
 import { useCartStore } from '../store/cartStore';
 import { getErrorMessage } from '../utils/api';
 
@@ -129,9 +130,11 @@ export default function CheckoutSuccessPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-white px-4 py-6">
-      <div className="max-w-5xl mx-auto space-y-6">
-        <div className="flex items-center gap-3">
+    <div className="min-h-screen bg-background text-white flex flex-col">
+      <Header />
+      <div className="flex-1 px-4 py-6">
+        <div className="max-w-5xl mx-auto space-y-6">
+          <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="text-gray-400 hover:text-white">
             <ArrowLeft />
           </button>
@@ -209,6 +212,7 @@ export default function CheckoutSuccessPage() {
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 }
